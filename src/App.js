@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, LogIn, Package, Plus, ShoppingCart, Star, Trash2, UserPlus, X, Zap } from 'lucide-react';
+import { ArrowLeft, Boxes, CheckCircle2, LayoutDashboard, LogIn, Package, Plus, PlusCircle, Search, Settings, ShoppingCart, Star, Trash2, UserPlus, Users, X, Zap } from 'lucide-react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -40,10 +40,54 @@ const App = () => {
 const AuthModal = ({ mode, setMode, onSubmit, error }) => <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setMode(null)}><div className="auth-modal"><button className="modal-close" onClick={() => setMode(null)}><X size={20} /></button><p className="eyebrow">SHOPHUB ACCOUNT</p><h2>{mode === 'login' ? 'Welcome back.' : 'Join ShopHub.'}</h2><p className="modal-subtitle">{mode === 'login' ? 'Sign in to keep your favorites close.' : 'Create an account for a smoother way to shop.'}</p><form onSubmit={onSubmit}>{mode === 'signup' && <label>Name<input name="name" placeholder="Your name" required /></label>}<label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" placeholder="At least 6 characters" minLength="6" required /></label>{error && <p className="form-error">{error}</p>}<button className="auth-submit" type="submit">{mode === 'login' ? <><LogIn size={17} /> Log in</> : <><UserPlus size={17} /> Create account</>}</button></form><button className="switch-auth" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></div></div>;
 
 const AdminPage = ({ user, token, products, setProducts }) => {
-  const [message, setMessage] = useState(''); const [error, setError] = useState('');
-  const createProduct = async (event) => { event.preventDefault(); setMessage(''); setError(''); const payload = Object.fromEntries(new FormData(event.currentTarget).entries()); try { const response = await fetch(`${API_URL}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ ...payload, price: Number(payload.price) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message); setProducts((current) => [data, ...current]); event.currentTarget.reset(); setMessage('Product added to the catalog.'); } catch (requestError) { setError(requestError.message || 'Unable to add product.'); } };
-  const deleteProduct = async (id) => { try { await fetch(`${API_URL}/products/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }); setProducts((current) => current.filter((product) => product._id !== id && product.id !== id)); } catch { setError('Unable to delete product.'); } };
-  return <section className="admin-page"><div className="admin-header"><div><p className="eyebrow">CONTROL ROOM</p><h1 className="section-title">Good morning, {user.name.split(' ')[0]}.</h1><p>Manage your ShopHub catalog from one place.</p></div><div className="admin-stat"><strong>{products.length}</strong><span>Catalog items</span></div></div><div className="admin-layout"><form className="admin-form" onSubmit={createProduct}><div className="form-heading"><Package size={21} /><h2>Add a product</h2></div><label>Product name<input name="title" placeholder="e.g. Linen overshirt" required /></label><div className="form-row"><label>Price<input name="price" type="number" min="0" step="0.01" placeholder="0.00" required /></label><label>Category<input name="category" placeholder="fashion" required /></label></div><label>Image URL<input name="image" type="url" placeholder="https://..." required /></label><label>Description<textarea name="description" rows="4" placeholder="What makes this product special?" required /></label>{message && <p className="form-success">{message}</p>}{error && <p className="form-error">{error}</p>}<button className="auth-submit" type="submit"><Plus size={17} /> Add product</button></form><div className="admin-list"><div className="form-heading"><Package size={21} /><h2>Current catalog</h2></div>{products.map((product) => <div className="admin-product" key={product._id || product.id}><img src={product.image} alt="" /><div><strong>{product.title}</strong><span>${Number(product.price).toFixed(2)}</span></div>{product._id && <button className="remove-btn" onClick={() => deleteProduct(product._id)}><Trash2 size={17} /></button>}</div>)}</div></div></section>;
+  const [section, setSection] = useState('overview');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const createProduct = async (event) => {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+    try {
+      const response = await fetch(`${API_URL}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ ...payload, price: Number(payload.price) }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      setProducts((current) => [data, ...current]);
+      event.currentTarget.reset();
+      setMessage('Product added to the catalog.');
+      setSection('products');
+    } catch (requestError) { setError(requestError.message || 'Unable to add product.'); }
+  };
+
+  const deleteProduct = async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/products/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error();
+      setProducts((current) => current.filter((product) => product._id !== id && product.id !== id));
+      setMessage('Product removed from the catalog.');
+    } catch { setError('Unable to delete product.'); }
+  };
+
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'products', label: 'Products', icon: Boxes },
+    { id: 'add', label: 'Add product', icon: PlusCircle },
+    { id: 'customers', label: 'Customers', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings }
+  ];
+
+  const Overview = () => <div className="admin-overview"><div className="admin-welcome"><div><p className="eyebrow">CONTROL ROOM</p><h1>Good morning, {user.name.split(' ')[0]}.</h1><p>Your store at a glance. Keep the catalog fresh and customers moving.</p></div><button className="admin-primary-button" onClick={() => setSection('add')}><Plus size={17} /> Add product</button></div><div className="admin-metrics"><div><span>Catalog items</span><strong>{products.length}</strong><small>Live products</small></div><div><span>Average rating</span><strong>{products.length ? (products.reduce((sum, product) => sum + (product.rating?.rate || 4.5), 0) / products.length).toFixed(1) : '0.0'}</strong><small>Across your catalog</small></div><div><span>Low stock</span><strong>0</strong><small>All inventory healthy</small></div><div><span>Store status</span><strong className="status-live">Live</strong><small>API connected when online</small></div></div><div className="admin-overview-grid"><div className="admin-panel"><div className="panel-heading"><div><p className="eyebrow">RECENT CATALOG</p><h2>Latest products</h2></div><button className="panel-link" onClick={() => setSection('products')}>View all</button></div>{products.slice(0, 4).map((product) => <AdminProductRow key={product._id || product.id} product={product} onDelete={deleteProduct} />)}</div><div className="admin-panel admin-shortcut"><p className="eyebrow">QUICK ACTION</p><h2>Bring something new to the shelf.</h2><p>Add a product with an image, price, category, and story customers can understand.</p><button className="admin-secondary-button" onClick={() => setSection('add')}><PlusCircle size={18} /> Create a listing</button></div></div></div>;
+
+  const Products = () => <div className="admin-products-page"><div className="admin-page-heading"><div><p className="eyebrow">CATALOG MANAGEMENT</p><h1>Products</h1><p>Review and manage every item in your store.</p></div><button className="admin-primary-button" onClick={() => setSection('add')}><Plus size={17} /> Add product</button></div><div className="admin-toolbar"><div className="admin-search"><Search size={17} /><input placeholder="Search products" /></div><span>{products.length} items</span></div><div className="admin-products-table"><div className="admin-table-head"><span>Product</span><span>Category</span><span>Price</span><span>Rating</span><span>Action</span></div>{products.map((product) => <div className="admin-table-row" key={product._id || product.id}><div className="admin-product-name"><img src={product.image} alt="" /><strong>{product.title}</strong></div><span className="table-muted">{product.category}</span><strong>${Number(product.price).toFixed(2)}</strong><span className="table-rating"><Star size={14} fill="#f5b841" color="#f5b841" /> {product.rating?.rate || 4.5}</span>{product._id ? <button className="table-delete" onClick={() => deleteProduct(product._id)}><Trash2 size={16} /></button> : <span className="table-muted">Demo</span>}</div>)}</div></div>;
+
+  const AddProduct = () => <div className="admin-add-page"><div className="admin-page-heading"><div><p className="eyebrow">CATALOG MANAGEMENT</p><h1>Add a product</h1><p>Give your next product a place in the collection.</p></div></div><form className="admin-form admin-form-wide" onSubmit={createProduct}><div className="form-heading"><Package size={21} /><h2>Product details</h2></div><div className="admin-form-columns"><div><label>Product name<input name="title" placeholder="e.g. Linen overshirt" required /></label><div className="form-row"><label>Price<input name="price" type="number" min="0" step="0.01" placeholder="0.00" required /></label><label>Category<input name="category" placeholder="fashion" required /></label></div><label>Image URL<input name="image" type="url" placeholder="https://..." required /></label></div><div><label>Description<textarea name="description" rows="8" placeholder="What makes this product special?" required /></label></div></div>{message && <p className="form-success">{message}</p>}{error && <p className="form-error">{error}</p>}<div className="form-actions"><button type="button" className="admin-secondary-button" onClick={() => setSection('products')}>Cancel</button><button className="admin-primary-button" type="submit"><Plus size={17} /> Publish product</button></div></form></div>;
+
+  const PlaceholderPage = ({ title, icon: Icon }) => <div className="admin-placeholder"><Icon size={30} /><p className="eyebrow">COMING NEXT</p><h1>{title}</h1><p>This admin section is ready for its data workflow. Product management is live today.</p></div>;
+
+  return <section className="admin-shell"><aside className="admin-sidebar"><div className="admin-brand"><span>SH</span><div><strong>ShopHub</strong><small>Admin workspace</small></div></div><nav className="admin-nav">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={section === id ? 'active' : ''} onClick={() => { setSection(id); setMessage(''); setError(''); }}><Icon size={18} />{label}</button>)}</nav><div className="admin-user"><div className="admin-avatar">{user.name.charAt(0).toUpperCase()}</div><div><strong>{user.name}</strong><small>Administrator</small></div></div></aside><div className="admin-workspace">{section === 'overview' && <Overview />}{section === 'products' && <Products />}{section === 'add' && <AddProduct />}{section === 'customers' && <PlaceholderPage title="Customers" icon={Users} />}{section === 'settings' && <PlaceholderPage title="Settings" icon={Settings} />}</div></section>;
 };
+
+const AdminProductRow = ({ product, onDelete }) => <div className="admin-product"><img src={product.image} alt="" /><div><strong>{product.title}</strong><span>${Number(product.price).toFixed(2)}</span></div>{product._id && <button className="remove-btn" onClick={() => onDelete(product._id)}><Trash2 size={17} /></button>}</div>;
 
 export default App;
